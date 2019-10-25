@@ -36,13 +36,27 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	targetPath := req.GetTargetPath()
 	fsType := req.GetVolumeCapability().GetMount().GetFsType()
-	devicePath := req.GetPublishInfo()["DevicePath"]
+	volumeID := req.GetVolumeId()
+
+	klog.V(3).Infof("NodePublishVolume with volumeID: %v", volumeID)
 
 	// Get Mount Provider
 	m, err := mount.GetMountProvider()
 	if err != nil {
 		klog.V(3).Infof("Failed to GetMountProvider: %v", err)
 		return nil, err
+	}
+
+	// Do not trust the path provided by cinder, get the real path on node
+	// devicePath := req.GetPublishInfo()["DevicePath"]
+	devicePath, err := m.GetDevicePath(volumeID)
+	if err != nil {
+		klog.V(3).Infof("Failed to GetDevicePath: %v", err)
+		return nil, err
+	}
+
+	if devicePath == "" {
+		return nil, status.Error(codes.Internal, "Unable to find Device path for volume")
 	}
 
 	// Device Scan
