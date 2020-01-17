@@ -139,7 +139,9 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if notMnt && !mount.IsCorruptedMnt(err) {
-		return nil, status.Error(codes.NotFound, "Volume not mounted")
+		// the volume is not mounted at all. There is no need for retrying to unmount.
+		klog.V(4).Infoln("NodeUnpublishVolume: skipping... not mounted any more")
+		return &csi.NodeUnpublishVolumeResponse{}, nil
 	}
 
 	err = m.UnmountPath(targetPath)
@@ -227,7 +229,9 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if notMnt && !mount.IsCorruptedMnt(err) {
-		return nil, status.Error(codes.NotFound, "Volume not mounted")
+		// the volume is not mounted at all. There is no need for retrying to unmount.
+		klog.V(4).Infoln("NodeUnstageVolume: skipping... not mounted any more")
+		return &csi.NodeUnstageVolumeResponse{}, nil
 	}
 
 	err = m.UnmountPath(stagingTargetPath)
